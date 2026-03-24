@@ -9,6 +9,14 @@ Rake::TestTask.new(:test) do |t|
   t.test_files = FileList["test/**/*_test.rb"]
 end
 
+DOCKER_SETUP = [
+  "sudo apt-get update -q",
+  "sudo apt-get install -y -q llvm-dev libclang-dev clang",
+  "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y",
+  "source $HOME/.cargo/env",
+  "bundle install"
+].join(" && ")
+
 begin
   require "rake/extensiontask"
   require "rb_sys/extensiontask"
@@ -32,24 +40,6 @@ begin
     ext.cross_platform = PLATFORMS
   end
 
-  task "gem:native" do
-    require "rake_compiler_dock"
-    sh "bundle config set cache_all true"
-
-    PLATFORMS.each do |platform|
-      RakeCompilerDock.sh(
-        "sudo apt-get update && sudo apt-get install -y llvm-dev libclang-dev clang && " \
-        "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y && " \
-        "source $HOME/.cargo/env && " \
-        "bundle install && " \
-        "rake native:#{platform} gem",
-        platform: platform
-      )
-    end
-  rescue LoadError
-    abort "rake_compiler_dock is required to build native gems"
-  end
-
   namespace "gem" do
     task "prepare" do
       require "rake_compiler_dock"
@@ -71,17 +61,15 @@ begin
       desc "Build the native gem for #{platform}"
       task platform => "prepare" do
         RakeCompilerDock.sh(
-          "sudo apt-get update && sudo apt-get install -y llvm-dev libclang-dev clang && " \
-          "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y && " \
-          "source $HOME/.cargo/env && " \
-          "bundle install && " \
-          "rake native:#{platform} gem RUBY_CC_VERSION='#{ENV.fetch("RUBY_CC_VERSION", nil)}'",
+          "#{DOCKER_SETUP} && rake native:#{platform} gem RUBY_CC_VERSION='#{ENV.fetch("RUBY_CC_VERSION", nil)}'",
           platform: platform
         )
       end
     end
   end
 rescue LoadError => e
+  warn "WARNING: Failed to load extension tasks: #{e.message}"
+
   desc "Compile task not available (rake-compiler not installed)"
   task :compile do
     abort "rake-compiler is required: #{e.message}\n\nRun: bundle install"
