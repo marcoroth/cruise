@@ -37,7 +37,7 @@ begin
     sh "bundle config set cache_all true"
 
     PLATFORMS.each do |platform|
-      RakeCompilerDock.sh "bundle --local && rake native:#{platform} gem", platform: platform
+      RakeCompilerDock.sh "bundle install && rake native:#{platform} gem", platform: platform
     end
   rescue LoadError
     abort "rake_compiler_dock is required to build native gems"
@@ -64,7 +64,7 @@ begin
       desc "Build the native gem for #{platform}"
       task platform => "prepare" do
         RakeCompilerDock.sh(
-          "bundle --local && rake native:#{platform} gem RUBY_CC_VERSION='#{ENV.fetch("RUBY_CC_VERSION", nil)}'",
+          "bundle install && rake native:#{platform} gem RUBY_CC_VERSION='#{ENV.fetch("RUBY_CC_VERSION", nil)}'",
           platform: platform
         )
       end
