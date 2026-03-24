@@ -1,0 +1,11 @@
+/.bundle/
+/vendor/bundle/
+/lib/cruise/cruise.*
+/lib/cruise/*.bundle
+/lib/cruise/*.so
+/lib/cruise/*.dll
+/pkg/
+/tmp/
+/target/
+*.gem
+Gemfile.lock

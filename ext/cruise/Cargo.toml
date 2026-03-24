@@ -1,0 +1,16 @@
+[package]
+name = "cruise"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+publish = false
+
+[dependencies]
+magnus = { version = "0.8", features = ["rb-sys"] }
+rb-sys = { version = "0.9" }
+notify = { version = "7", features = ["macos_fsevent"] }
+notify-debouncer-full = "0.4"
+globset = "0.4"
+
+[lib]
+crate-type = ["cdylib"]
