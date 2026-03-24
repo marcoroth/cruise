@@ -18,26 +18,20 @@ begin
     "aarch64-linux-gnu",
     "aarch64-linux-musl",
     "arm-linux-gnu",
-    "arm-linux-musl",
     "arm64-darwin",
     "x86_64-darwin",
     "x86_64-linux-gnu",
-    "x86_64-linux-musl",
-    "x86-linux-gnu",
-    "x86-linux-musl"
+    "x86_64-linux-musl"
   ].freeze
 
   RB_SYS_PLATFORM_MAP = {
     "aarch64-linux-gnu" => "aarch64-linux",
     "aarch64-linux-musl" => "aarch64-linux-musl",
     "arm-linux-gnu" => "arm-linux",
-    "arm-linux-musl" => "arm-linux",
     "arm64-darwin" => "arm64-darwin",
     "x86_64-darwin" => "x86_64-darwin",
     "x86_64-linux-gnu" => "x86_64-linux",
-    "x86_64-linux-musl" => "x86_64-linux-musl",
-    "x86-linux-gnu" => "x86-linux",
-    "x86-linux-musl" => "x86-linux"
+    "x86_64-linux-musl" => "x86_64-linux-musl"
   }.freeze
 
   RbSys::ExtensionTask.new("cruise", Gem::Specification.load("cruise.gemspec")) do |ext|
