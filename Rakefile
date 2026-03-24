@@ -14,6 +14,7 @@ DOCKER_SETUP = [
   "sudo apt-get install -y -q llvm-dev libclang-dev clang",
   "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y",
   "source $HOME/.cargo/env",
+  "gem install rake-compiler rb_sys",
   "bundle install"
 ].join(" && ")
 
