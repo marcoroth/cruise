@@ -9,16 +9,9 @@ Rake::TestTask.new(:test) do |t|
   t.test_files = FileList["test/**/*_test.rb"]
 end
 
-DOCKER_SETUP = [
-  "sudo apt-get update -q",
-  "sudo apt-get install -y -q llvm-dev libclang-dev clang",
-  "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y",
-  "source $HOME/.cargo/env",
-  "bundle install"
-].join(" && ").freeze
-
 begin
   require "rake/extensiontask"
+  require "rb_sys"
   require "rb_sys/extensiontask"
 
   PLATFORMS = [
@@ -33,6 +26,19 @@ begin
     "x86-linux-gnu",
     "x86-linux-musl"
   ].freeze
+
+  RB_SYS_PLATFORM_MAP = {
+    "aarch64-linux-gnu" => "aarch64-linux",
+    "aarch64-linux-musl" => "aarch64-linux-musl",
+    "arm-linux-gnu" => "arm-linux",
+    "arm-linux-musl" => "arm-linux",
+    "arm64-darwin" => "arm64-darwin",
+    "x86_64-darwin" => "x86_64-darwin",
+    "x86_64-linux-gnu" => "x86_64-linux",
+    "x86_64-linux-musl" => "x86_64-linux-musl",
+    "x86-linux-gnu" => "x86-linux",
+    "x86-linux-musl" => "x86-linux"
+  }.freeze
 
   RbSys::ExtensionTask.new("cruise", Gem::Specification.load("cruise.gemspec")) do |ext|
     ext.lib_dir = "lib/cruise"
@@ -60,9 +66,12 @@ begin
 
       desc "Build the native gem for #{platform}"
       task platform => "prepare" do
+        rb_sys_platform = RB_SYS_PLATFORM_MAP.fetch(platform)
+
         RakeCompilerDock.sh(
-          "#{DOCKER_SETUP} && bundle exec rake native:#{platform} gem RUBY_CC_VERSION='#{ENV.fetch("RUBY_CC_VERSION", nil)}'",
-          platform: platform
+          "bundle install && bundle exec rake native:#{platform} gem RUBY_CC_VERSION='#{ENV.fetch("RUBY_CC_VERSION", nil)}'",
+          platform: platform,
+          image: "rbsys/#{rb_sys_platform}:#{RbSys::VERSION}"
         )
       end
     end
