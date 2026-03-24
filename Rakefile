@@ -14,9 +14,8 @@ DOCKER_SETUP = [
   "sudo apt-get install -y -q llvm-dev libclang-dev clang",
   "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y",
   "source $HOME/.cargo/env",
-  "gem install rake-compiler rb_sys",
   "bundle install"
-].join(" && ")
+].join(" && ").freeze
 
 begin
   require "rake/extensiontask"
@@ -62,7 +61,7 @@ begin
       desc "Build the native gem for #{platform}"
       task platform => "prepare" do
         RakeCompilerDock.sh(
-          "#{DOCKER_SETUP} && rake native:#{platform} gem RUBY_CC_VERSION='#{ENV.fetch("RUBY_CC_VERSION", nil)}'",
+          "#{DOCKER_SETUP} && bundle exec rake native:#{platform} gem RUBY_CC_VERSION='#{ENV.fetch("RUBY_CC_VERSION", nil)}'",
           platform: platform
         )
       end
