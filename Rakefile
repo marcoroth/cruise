@@ -6,13 +6,12 @@ require "rake/testtask"
 Rake::TestTask.new(:test) do |t|
   t.libs << "test"
   t.libs << "lib"
+  t.libs << "ext"
   t.test_files = FileList["test/**/*_test.rb"]
 end
 
 begin
   require "rake/extensiontask"
-  require "rb_sys"
-  require "rb_sys/extensiontask"
 
   PLATFORMS = [
     "aarch64-linux-gnu",
@@ -31,11 +30,15 @@ begin
     "arm64-darwin" => "arm64-darwin",
     "x86_64-darwin" => "x86_64-darwin",
     "x86_64-linux-gnu" => "x86_64-linux",
-    "x86_64-linux-musl" => "x86_64-linux-musl"
+    "x86_64-linux-musl" => "x86_64-linux-musl",
   }.freeze
 
-  RbSys::ExtensionTask.new("cruise", Gem::Specification.load("cruise.gemspec")) do |ext|
+  Rake::ExtensionTask.new do |ext|
+    ext.name = "cruise"
+    ext.source_pattern = "*.{c,h}"
+    ext.ext_dir = "ext/cruise"
     ext.lib_dir = "lib/cruise"
+    ext.gem_spec = Gem::Specification.load("cruise.gemspec")
     ext.cross_compile = true
     ext.cross_platform = PLATFORMS
   end
@@ -60,10 +63,13 @@ begin
 
       desc "Build the native gem for #{platform}"
       task platform => "prepare" do
+        require "rb_sys"
+
         rb_sys_platform = RB_SYS_PLATFORM_MAP.fetch(platform)
 
         RakeCompilerDock.sh(
-          "bundle install && bundle exec rake native:#{platform} gem RUBY_CC_VERSION='#{ENV.fetch("RUBY_CC_VERSION", nil)}'",
+          "export RCD_PLATFORM=#{platform} && " \
+          "bundle --local && rake native:#{platform} gem RUBY_CC_VERSION='#{ENV.fetch("RUBY_CC_VERSION", nil)}'",
           platform: platform,
           image: "rbsys/#{rb_sys_platform}:#{RbSys::VERSION}"
         )
@@ -79,4 +85,5 @@ rescue LoadError => e
   end
 end
 
+task test: :compile
 task default: [:compile, :test]

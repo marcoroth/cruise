@@ -6,6 +6,16 @@
 /lib/cruise/*.dll
 /pkg/
 /tmp/
-/target/
 *.gem
 Gemfile.lock
+
+/target/
+/ext/cruise/target/
+
+/ext/cruise/include/cruise.h
+
+/ext/cruise/Makefile
+/ext/cruise/*.o
+/ext/cruise/*.bundle
+/ext/cruise/*.so
+/ext/cruise/mkmf.log

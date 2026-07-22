@@ -2,6 +2,11 @@ AllCops:
   NewCops: enable
   SuggestExtensions: false
   TargetRubyVersion: 3.2
+  Exclude:
+    - "ext/**/*"
+    - "vendor/**/*"
+    - "tmp/**/*"
+    - "pkg/**/*"
 
 Style/StringLiterals:
   Enabled: true

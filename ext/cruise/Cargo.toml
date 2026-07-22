@@ -1,16 +1,21 @@
 [package]
 name = "cruise"
 version = "0.1.0"
-edition = "2024"
+edition = "2021"
+authors = ["Marco Roth <marco.roth@intergga.ch>"]
+description = "A fast, OS-native file watcher for Ruby"
 license = "MIT"
 publish = false
 
+[lib]
+name = "cruise"
+path = "src/lib.rs"
+crate-type = ["staticlib"]
+
 [dependencies]
-magnus = { version = "0.8", features = ["rb-sys"] }
-rb-sys = { version = "0.9" }
 notify = { version = "7", features = ["macos_fsevent"] }
 notify-debouncer-full = "0.4"
 globset = "0.4"
 
-[lib]
-crate-type = ["cdylib"]
+[build-dependencies]
+cbindgen = "0.28"

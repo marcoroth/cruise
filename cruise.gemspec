@@ -8,8 +8,8 @@ Gem::Specification.new do |spec|
   spec.authors = ["Marco Roth"]
   spec.email = ["marco.roth@intergga.ch"]
 
-  spec.summary = "A fast, native file watcher for Ruby"
-  spec.description = "Cruise is a Rust-powered file system watcher with native OS integration. Uses FSEvents on macOS and inotify on Linux."
+  spec.summary = "A fast, OS-native file watcher for Ruby"
+  spec.description = "Cruise is a file system watcher built on native OS events. Uses FSEvents on macOS and inotify on Linux."
   spec.homepage = "https://github.com/marcoroth/cruise"
   spec.license = "MIT"
 
@@ -19,10 +19,18 @@ Gem::Specification.new do |spec|
   spec.files = Dir[
     "cruise.gemspec",
     "LICENSE.txt",
+    "README.md",
     "Cargo.toml",
+    "Cargo.lock",
     "Rakefile",
     "lib/**/*.rb",
-    "ext/**/*.{rs,toml,rb,lock}"
+    "ext/cruise/build.rs",
+    "ext/cruise/Cargo.toml",
+    "ext/cruise/cbindgen.toml",
+    "ext/cruise/cruise.c",
+    "ext/cruise/extconf.rb",
+    "ext/cruise/include/**/*.h",
+    "ext/cruise/src/**/*.rs"
   ]
 
   spec.extensions = ["ext/cruise/extconf.rb"]
@@ -33,6 +41,4 @@ Gem::Specification.new do |spec|
   spec.metadata["changelog_uri"] = "#{spec.homepage}/releases"
   spec.metadata["source_code_uri"] = spec.homepage
   spec.metadata["bug_tracker_uri"] = "#{spec.homepage}/issues"
-
-  spec.add_dependency "rb_sys"
 end
