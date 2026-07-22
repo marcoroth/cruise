@@ -44,6 +44,9 @@ Metrics/MethodLength:
 
 Metrics/BlockLength:
   Max: 30
+  Exclude:
+    - "test/**/*"
+    - "*.gemspec"
 
 Metrics/ClassLength:
   Max: 200

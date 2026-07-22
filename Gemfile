@@ -4,6 +4,7 @@ source "https://rubygems.org"
 
 gemspec
 
+gem "async", "~> 2.0"
 gem "maxitest", "~> 7.0"
 gem "minitest", "~> 6.0"
 gem "rake", "~> 13.0"

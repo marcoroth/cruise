@@ -8,4 +8,4 @@
 mod ffi;
 mod watcher;
 
-pub use watcher::{WaitStatus, Watcher};
+pub use watcher::Watcher;

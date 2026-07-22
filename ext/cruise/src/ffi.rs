@@ -6,16 +6,16 @@
 //! are `(pointer, count)` pairs of NUL-terminated UTF-8 C strings. Any C string
 //! returned through an out-parameter is heap-allocated by Rust and must be
 //! released with [`cruise_string_free`]; the watcher handle with
-//! [`cruise_watcher_free`].
+//! [`cruise_watcher_free`]. The read fd returned by [`cruise_watcher_new`] is
+//! transferred to the caller, who is responsible for closing it.
 
 #![allow(clippy::missing_safety_doc)]
 
 use std::ffi::{CStr, CString};
-use std::os::raw::c_char;
+use std::os::raw::{c_char, c_int};
 use std::ptr;
-use std::time::Duration;
 
-use crate::{WaitStatus, Watcher};
+use crate::Watcher;
 
 /// A single filesystem event handed to the C side. Both strings are owned by
 /// the caller once populated and must be freed with [`cruise_string_free`].
@@ -25,20 +25,12 @@ pub struct CruiseEvent {
   pub kind: *mut c_char,
 }
 
-/// Result of [`cruise_watcher_next_event`].
-#[repr(C)]
-pub enum CruiseWaitStatus {
-  Event,
-  Timeout,
-  Disconnected,
-}
-
-unsafe fn c_string_array(ptr: *const *const c_char, count: usize) -> Vec<String> {
-  if ptr.is_null() || count == 0 {
+unsafe fn c_string_array(pointer: *const *const c_char, count: usize) -> Vec<String> {
+  if pointer.is_null() || count == 0 {
     return Vec::new();
   }
 
-  std::slice::from_raw_parts(ptr, count)
+  std::slice::from_raw_parts(pointer, count)
     .iter()
     .filter_map(|&entry| {
       if entry.is_null() {
@@ -52,9 +44,10 @@ unsafe fn c_string_array(ptr: *const *const c_char, count: usize) -> Vec<String>
 
 /// Create a watcher over `paths`, filtered by `globs` and `only_kinds`.
 ///
-/// Returns a heap-allocated handle, or null on error (in which case a message
-/// is written to `out_error` when non-null, to be freed with
-/// [`cruise_string_free`]).
+/// On success returns a heap-allocated handle and writes the read end of the
+/// event pipe to `out_read_fd` (ownership transfers to the caller). On error
+/// returns null and, when `out_error` is non-null, writes a message to be freed
+/// with [`cruise_string_free`].
 #[no_mangle]
 pub unsafe extern "C" fn cruise_watcher_new(
   paths: *const *const c_char,
@@ -64,6 +57,7 @@ pub unsafe extern "C" fn cruise_watcher_new(
   glob_count: usize,
   only_kinds: *const *const c_char,
   only_count: usize,
+  out_read_fd: *mut c_int,
   out_error: *mut *mut c_char,
 ) -> *mut Watcher {
   let paths = c_string_array(paths, path_count);
@@ -71,8 +65,13 @@ pub unsafe extern "C" fn cruise_watcher_new(
   let only = c_string_array(only_kinds, only_count);
 
   match Watcher::new(&paths, debounce, &globs, only) {
-    Ok(watcher) => Box::into_raw(Box::new(watcher)),
+    Ok((watcher, read_fd)) => {
+      if !out_read_fd.is_null() {
+        *out_read_fd = read_fd;
+      }
 
+      Box::into_raw(Box::new(watcher))
+    }
     Err(message) => {
       if !out_error.is_null() {
         *out_error = CString::new(message).unwrap_or_default().into_raw();
@@ -83,35 +82,32 @@ pub unsafe extern "C" fn cruise_watcher_new(
   }
 }
 
-/// Block up to `timeout_ms` for the next matching event.
-///
-/// On [`CruiseWaitStatus::Event`], `out_event` is populated with freshly
-/// allocated `path` and `kind` strings. This function never touches Ruby, so
-/// the C wrapper can call it with the GVL released.
+/// Non-blocking: pop the next queued event into `out_event` and return true, or
+/// return false if the queue is empty. Never touches Ruby and never blocks — the
+/// C wrapper waits on the pipe fd instead.
 #[no_mangle]
-pub unsafe extern "C" fn cruise_watcher_next_event(watcher: *mut Watcher, timeout_ms: u64, out_event: *mut CruiseEvent) -> CruiseWaitStatus {
+pub unsafe extern "C" fn cruise_watcher_poll(watcher: *mut Watcher, out_event: *mut CruiseEvent) -> bool {
   if watcher.is_null() {
-    return CruiseWaitStatus::Disconnected;
+    return false;
   }
 
-  let watcher = &mut *watcher;
+  let watcher = &*watcher;
 
-  match watcher.next_event(Duration::from_millis(timeout_ms)) {
-    WaitStatus::Event(path, kind) => {
+  match watcher.poll() {
+    Some((path, kind)) => {
       if !out_event.is_null() {
         (*out_event).path = CString::new(path).unwrap_or_default().into_raw();
         (*out_event).kind = CString::new(kind).unwrap_or_default().into_raw();
       }
 
-      CruiseWaitStatus::Event
+      true
     }
-
-    WaitStatus::Timeout => CruiseWaitStatus::Timeout,
-    WaitStatus::Disconnected => CruiseWaitStatus::Disconnected,
+    None => false,
   }
 }
 
-/// Free a watcher handle. Stops watching and joins the background thread.
+/// Free a watcher handle. Stops watching, joins the background thread, and
+/// closes the write end of the pipe (the reader then observes EOF).
 #[no_mangle]
 pub unsafe extern "C" fn cruise_watcher_free(watcher: *mut Watcher) {
   if !watcher.is_null() {

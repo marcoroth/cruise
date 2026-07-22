@@ -16,6 +16,7 @@ crate-type = ["staticlib"]
 notify = { version = "7", features = ["macos_fsevent"] }
 notify-debouncer-full = "0.4"
 globset = "0.4"
+libc = "0.2"
 
 [build-dependencies]
 cbindgen = "0.28"
