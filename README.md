@@ -1,14 +1,16 @@
 <div align="center">
   <h1>Cruise</h1>
-  <h4>A fast, native file watcher for Ruby.</h4>
+  <h4>A fast, OS-native file watcher for Ruby.</h4>
 
   <p>
     <a href="https://rubygems.org/gems/cruise"><img alt="Gem Version" src="https://img.shields.io/gem/v/cruise"></a>
     <a href="https://github.com/marcoroth/cruise/blob/main/LICENSE.txt"><img alt="License" src="https://img.shields.io/github/license/marcoroth/cruise"></a>
   </p>
 
-  <p>Rust-powered file system watcher with native OS integration.<br/>Uses FSEvents on macOS and inotify on Linux.</p>
+  <p>A file system watcher built on native OS events, not polling.<br/>Uses FSEvents on macOS and inotify on Linux.</p>
 </div>
+
+Cruise was originally built to power file watching in the [Herb](https://herb-tools.dev) dev server, none of the existing Ruby watchers were quite reliable enough for the realtime hot reloading that a local development server and workflow needs. It also works standalone for any project that needs to react to file changes.
 
 ## Installation
 
@@ -42,9 +44,9 @@ end
 
 The callback receives a `Cruise::Event` with two attributes:
 
-| Attribute | Description |
-|-----------|-------------|
-| `event.path` | Absolute path to the changed file |
+| Attribute    | Description                                                                            |
+|--------------|----------------------------------------------------------------------------------------|
+| `event.path` | Absolute path to the changed file                                                      |
 | `event.kind` | One of: `"created"`, `"modified"`, `"renamed"`, `"removed"`, `"accessed"`, `"changed"` |
 
 ### Multiple Directories
@@ -124,7 +126,7 @@ end
 
 ## How It Works
 
-Cruise is a Ruby binding (via [Magnus](https://github.com/matsadler/magnus) and [rb-sys](https://github.com/oxidize-rb/rb-sys)) around the Rust [notify](https://github.com/notify-rs/notify) crate.
+Cruise is a Ruby C extension that links a Rust static library (`libcruise.a`) built around the [notify](https://github.com/notify-rs/notify) crate. The Rust core exposes a small C ABI (generated with [cbindgen](https://github.com/mozilla/cbindgen)) and knows nothing about Ruby. A thin hand-written C wrapper bridges that ABI to Ruby objects via the Ruby C API.
 
 1. `Cruise.watch` sets up a [notify](https://github.com/notify-rs/notify) watcher with event debouncing (100ms)
 2. A background thread monitors filesystem events using the OS-native API
@@ -133,12 +135,22 @@ Cruise is a Ruby binding (via [Magnus](https://github.com/matsadler/magnus) and 
 
 ### Platform Backends
 
-| Platform | Backend | API |
-|----------|---------|-----|
-| macOS | FSEvents | `CoreServices` framework |
-| Linux | inotify | `inotify_init1` syscall |
+| Platform | Backend  | API                      |
+|----------|----------|--------------------------|
+| macOS    | FSEvents | `CoreServices` framework |
+| Linux    | inotify  | `inotify_init1` syscall  |
 
 All backends watch recursively by default.
+
+## Prior Art
+
+Cruise builds on ideas from the Ruby ecosystem's existing file watchers:
+
+- **[`listen`](https://github.com/guard/listen)** the long-standing workhorse behind Guard, Rails, and much of the ecosystem. Wraps [rb-fsevent](https://github.com/guard/rb-fsevent) (macOS) and [rb-inotify](https://github.com/guard/rb-inotify) (Linux), with a polling fallback for other platforms and network shares.
+- **[`guard`](https://github.com/guard/guard)** a command-line tool, built on listen, that runs tasks (tests, reloads, builds) in response to file changes.
+- **[`io-watch`](https://github.com/socketry/io-watch)** a newer, deliberately minimal library from the [socketry](https://github.com/socketry) project, offering one simple, unified directory-watching interface across platforms without per-platform multiplexing in application code.
+
+Cruise shares `io-watch`'s preference for a single, native-events-only interface over platform multiplexing. On top of that it focuses on what a hot-reload loop needs: built-in debouncing, glob and event-kind filtering, and precompiled native gems so there's nothing to build at install time on supported platforms. It deliberately has no polling adapter, so filesystems where native events aren't delivered fall outside its scope, reach for [listen](https://github.com/guard/listen) there.
 
 ## Development
 

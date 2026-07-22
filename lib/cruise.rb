@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require_relative "cruise/version"
+require_relative "cruise/event"
 
 begin
   ruby_version = RUBY_VERSION.split(".")[0..1].join(".")
