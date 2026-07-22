@@ -10,7 +10,6 @@ no_includes = true
 [export]
 include = [
   "CruiseEvent",
-  "CruiseWaitStatus",
 ]
 
 [enum]

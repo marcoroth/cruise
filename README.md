@@ -124,6 +124,52 @@ rescue Interrupt
 end
 ```
 
+### Async / Fibers
+
+`Cruise.watch` cooperates with Ruby's fiber scheduler, the API is identical whether you're on threads or fibers, with no separate "async mode." It waits on an internal pipe via `IO#wait_readable`, which yields to other fibers when a scheduler is active (for example inside [`Async`](https://github.com/socketry/async)) and otherwise blocks the thread with the GVL released.
+
+```ruby
+require "async"
+require "cruise"
+
+Async do |task|
+  task.async do
+    Cruise.watch("app/views", glob: "**/*.html.erb") do |event|
+      reload(event.path)
+    end
+  end
+
+  task.async do
+    start_dev_server
+  end
+end
+```
+
+Cruise doesn't depend on `async`, it only relies on the standard `IO#wait_readable` hook, so any `Fiber::Scheduler` works.
+
+#### Lower-level watcher
+
+For custom event loops or manually-driven fibers, `Cruise::Watcher` exposes a readable `IO` and a non-blocking `#poll`:
+
+```ruby
+watcher = Cruise::Watcher.new("app/views", glob: "**/*.erb", debounce: 0.1)
+
+begin
+  loop do
+    watcher.io.wait_readable
+    watcher.io.read_nonblock(4096, exception: false)  
+
+    while (event = watcher.poll)
+      handle(event)
+    end
+  end
+ensure
+  watcher.close
+end
+```
+
+`Cruise::Watcher.new` takes the same paths keyword arguments as `Cruise.watch`, it's the watcher `Cruise.watch` runs internally.
+
 ## How It Works
 
 Cruise is a Ruby C extension that links a Rust static library (`libcruise.a`) built around the [notify](https://github.com/notify-rs/notify) crate. The Rust core exposes a small C ABI (generated with [cbindgen](https://github.com/mozilla/cbindgen)) and knows nothing about Ruby. A thin hand-written C wrapper bridges that ABI to Ruby objects via the Ruby C API.

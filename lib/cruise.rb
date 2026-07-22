@@ -1,7 +1,10 @@
 # frozen_string_literal: true
 
+require "io/wait"
+
 require_relative "cruise/version"
 require_relative "cruise/event"
+require_relative "cruise/watcher"
 
 begin
   ruby_version = RUBY_VERSION.split(".")[0..1].join(".")
@@ -19,17 +22,44 @@ module Cruise
   DEFAULT_DEBOUNCE = 0.1
 
   class << self
-    def watch(*args, glob: nil, debounce: DEFAULT_DEBOUNCE, only: nil, callback: nil, &block)
+    # Watch one or more paths and yield a Cruise::Event for each change.
+    #
+    # Blocks until interrupted. Waiting happens on the watcher's pipe via
+    # IO#wait_readable, so this releases the GVL for other threads and, when a
+    # Fiber scheduler is set (e.g. inside Async), yields to other fibers instead
+    # of blocking the reactor.
+    def watch(*paths, glob: nil, debounce: DEFAULT_DEBOUNCE, only: nil, callback: nil, &block)
       callback = block || callback
-      paths = args.flatten.grep(String)
 
-      raise ArgumentError, "Cruise.watch requires at least one path" if paths.empty?
       raise ArgumentError, "Cruise.watch requires a block or callback" unless callback
 
-      glob_patterns = glob ? Array(glob) : []
-      only_kinds = only ? Array(only).map(&:to_s) : []
+      watcher = Watcher.new(*paths, glob: glob, debounce: debounce, only: only)
+      io = watcher.io
 
-      _watch(paths, callback, debounce.to_f, glob_patterns, only_kinds)
+      begin
+        loop do
+          io.wait_readable
+          closed = drain_wakeups(io)
+
+          while (event = watcher.poll)
+            callback.call(event)
+          end
+
+          break if closed
+        end
+      ensure
+        watcher.close
+      end
+    end
+
+    private
+
+    def drain_wakeups(io)
+      loop { io.read_nonblock(4096) }
+    rescue IO::WaitReadable
+      false
+    rescue IOError
+      true
     end
   end
 end
