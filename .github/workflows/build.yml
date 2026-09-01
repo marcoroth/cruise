@@ -43,3 +43,20 @@ jobs:
 
       - name: Run tests
         run: bundle exec rake test
+
+      - name: Check sig/ matches the inline annotations
+        run: |
+          bundle exec rake rbs
+          git diff --exit-code sig/ || {
+            echo "::error::sig/ is out of date. Run: bundle exec rake rbs"
+            exit 1
+          }
+
+      - name: Install RBS collection
+        run: bundle exec rbs collection install
+
+      - name: Validate RBS
+        run: bundle exec rbs --repo .gem_rbs_collection -I sig validate
+
+      - name: Run Steep
+        run: bundle exec steep check

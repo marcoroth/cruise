@@ -7,7 +7,7 @@ require_relative "cruise/event"
 require_relative "cruise/watcher"
 
 begin
-  ruby_version = RUBY_VERSION.split(".")[0..1].join(".")
+  ruby_version = RUBY_VERSION.split(".").take(2).join(".")
 
   begin
     require "cruise/#{ruby_version}/cruise"
@@ -19,7 +19,7 @@ rescue LoadError => e
 end
 
 module Cruise
-  DEFAULT_DEBOUNCE = 0.1
+  DEFAULT_DEBOUNCE = 0.1 #: Float
 
   class << self
     # Watch one or more paths and yield a Cruise::Event for each change.
@@ -28,6 +28,7 @@ module Cruise
     # IO#wait_readable, so this releases the GVL for other threads and, when a
     # Fiber scheduler is set (e.g. inside Async), yields to other fibers instead
     # of blocking the reactor.
+    #: (*paths paths, ?glob: globs?, ?debounce: debounce, ?only: kinds?, ?callback: callback?) ?{ (Event) -> void } -> void
     def watch(*paths, glob: nil, debounce: DEFAULT_DEBOUNCE, only: nil, callback: nil, &block)
       callback = block || callback
 
@@ -54,6 +55,7 @@ module Cruise
 
     private
 
+    #: (IO io) -> bool
     def drain_wakeups(io)
       loop { io.read_nonblock(4096) }
     rescue IO::WaitReadable
