@@ -85,5 +85,15 @@ rescue LoadError => e
   end
 end
 
+desc "Generate RBS signatures from the inline annotations"
+task :rbs do
+  sh "bundle exec rbs-inline --opt-out --output=sig/ lib/"
+end
+
+desc "Type check with Steep"
+task :steep do
+  sh "bundle exec steep check"
+end
+
 task test: :compile
-task default: [:compile, :test]
+task default: [:compile, :test, :steep]

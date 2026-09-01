@@ -19,3 +19,5 @@ Gemfile.lock
 /ext/cruise/*.bundle
 /ext/cruise/*.so
 /ext/cruise/mkmf.log
+
+/.gem_rbs_collection/

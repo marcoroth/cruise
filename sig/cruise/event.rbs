@@ -1,0 +1,18 @@
+# Generated from lib/cruise/event.rb with RBS::Inline
+
+module Cruise
+  class Event
+    attr_reader path: String
+
+    attr_reader kind: String
+
+    # : (String path, String kind) -> void
+    def initialize: (String path, String kind) -> void
+
+    # : () -> String
+    def inspect: () -> String
+
+    # : () -> String
+    def to_s: () -> String
+  end
+end

@@ -1,0 +1,22 @@
+# Generated from lib/cruise/watcher.rb with RBS::Inline
+
+module Cruise
+  class Watcher
+    # : (*paths paths, ?glob: globs?, ?debounce: debounce, ?only: kinds?) -> void
+    def initialize: (*paths paths, ?glob: globs?, ?debounce: debounce, ?only: kinds?) -> void
+
+    # : () -> IO
+    def io: () -> IO
+
+    # : () -> Event?
+    def poll: () -> Event?
+
+    # : () -> void
+    def close: () -> void
+
+    private
+
+    # : (Array[String] paths, Float debounce, Array[String] globs, Array[String] only_kinds) -> void
+    def initialize_native: (Array[String] paths, Float debounce, Array[String] globs, Array[String] only_kinds) -> void
+  end
+end

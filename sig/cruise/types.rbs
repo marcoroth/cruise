@@ -1,0 +1,13 @@
+# Note: This file is hand written, `rbs-inline` does not generate this file.
+
+module Cruise
+  type paths = String | Array[String]
+
+  type globs = String | Array[String]
+
+  type kinds = String | Symbol | Array[String | Symbol]
+
+  type debounce = _ToF
+
+  type callback = ^(Event) -> void
+end

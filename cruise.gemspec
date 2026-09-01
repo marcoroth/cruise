@@ -24,6 +24,7 @@ Gem::Specification.new do |spec|
     "Cargo.lock",
     "Rakefile",
     "lib/**/*.rb",
+    "sig/**/*.rbs",
     "ext/cruise/build.rs",
     "ext/cruise/Cargo.toml",
     "ext/cruise/cbindgen.toml",
