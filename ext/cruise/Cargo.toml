@@ -13,10 +13,10 @@ path = "src/lib.rs"
 crate-type = ["staticlib"]
 
 [dependencies]
-notify = { version = "7", features = ["macos_fsevent"] }
-notify-debouncer-full = "0.4"
+notify = { version = "8", features = ["macos_fsevent"] }
+notify-debouncer-full = "0.7"
 globset = "0.4"
 libc = "0.2"
 
 [build-dependencies]
-cbindgen = "0.28"
+cbindgen = "0.29"
