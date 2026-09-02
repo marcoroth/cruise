@@ -106,6 +106,29 @@ pub unsafe extern "C" fn cruise_watcher_poll(watcher: *mut Watcher, out_event: *
   }
 }
 
+/// Non-blocking: pop the next queued watcher error into `out_message` and
+/// return true, or return false if there are none. The message is heap
+/// allocated by Rust and must be freed with [`cruise_string_free`].
+#[no_mangle]
+pub unsafe extern "C" fn cruise_watcher_poll_error(watcher: *mut Watcher, out_message: *mut *mut c_char) -> bool {
+  if watcher.is_null() {
+    return false;
+  }
+
+  let watcher = &*watcher;
+
+  match watcher.poll_error() {
+    Some(message) => {
+      if !out_message.is_null() {
+        *out_message = CString::new(message).unwrap_or_default().into_raw();
+      }
+
+      true
+    }
+    None => false,
+  }
+}
+
 /// Free a watcher handle. Stops watching, joins the background thread, and
 /// closes the write end of the pipe (the reader then observes EOF).
 #[no_mangle]

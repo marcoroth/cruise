@@ -3,14 +3,16 @@
 module Cruise
   DEFAULT_DEBOUNCE: Float
 
+  DEFAULT_ERROR_HANDLER: error_callback
+
   # Watch one or more paths and yield a Cruise::Event for each change.
   #
   # Blocks until interrupted. Waiting happens on the watcher's pipe via
   # IO#wait_readable, so this releases the GVL for other threads and, when a
   # Fiber scheduler is set (e.g. inside Async), yields to other fibers instead
   # of blocking the reactor.
-  # : (*paths paths, ?glob: globs?, ?debounce: debounce, ?only: kinds?, ?callback: callback?) ?{ (Event) -> void } -> void
-  def self.watch: (*paths paths, ?glob: globs?, ?debounce: debounce, ?only: kinds?, ?callback: callback?) ?{ (Event) -> void } -> void
+  # : (*paths paths, ?glob: globs?, ?debounce: debounce, ?only: kinds?, ?callback: callback?, ?on_error: error_callback?) ?{ (Event) -> void } -> void
+  def self.watch: (*paths paths, ?glob: globs?, ?debounce: debounce, ?only: kinds?, ?callback: callback?, ?on_error: error_callback?) ?{ (Event) -> void } -> void
 
   # : (IO io) -> bool
   private def self.drain_wakeups: (IO io) -> bool

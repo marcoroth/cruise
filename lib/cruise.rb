@@ -20,6 +20,7 @@ end
 
 module Cruise
   DEFAULT_DEBOUNCE = 0.1 #: Float
+  DEFAULT_ERROR_HANDLER = ->(message) { warn "Cruise: #{message}" } #: error_callback
 
   class << self
     # Watch one or more paths and yield a Cruise::Event for each change.
@@ -28,11 +29,13 @@ module Cruise
     # IO#wait_readable, so this releases the GVL for other threads and, when a
     # Fiber scheduler is set (e.g. inside Async), yields to other fibers instead
     # of blocking the reactor.
-    #: (*paths paths, ?glob: globs?, ?debounce: debounce, ?only: kinds?, ?callback: callback?) ?{ (Event) -> void } -> void
-    def watch(*paths, glob: nil, debounce: DEFAULT_DEBOUNCE, only: nil, callback: nil, &block)
+    #: (*paths paths, ?glob: globs?, ?debounce: debounce, ?only: kinds?, ?callback: callback?, ?on_error: error_callback?) ?{ (Event) -> void } -> void
+    def watch(*paths, glob: nil, debounce: DEFAULT_DEBOUNCE, only: nil, callback: nil, on_error: nil, &block)
       callback = block || callback
 
       raise ArgumentError, "Cruise.watch requires a block or callback" unless callback
+
+      error_handler = on_error || DEFAULT_ERROR_HANDLER
 
       watcher = Watcher.new(*paths, glob: glob, debounce: debounce, only: only)
       io = watcher.io
@@ -41,6 +44,10 @@ module Cruise
         loop do
           io.wait_readable
           closed = drain_wakeups(io)
+
+          while (message = watcher.poll_error)
+            error_handler.call(message)
+          end
 
           while (event = watcher.poll)
             callback.call(event)

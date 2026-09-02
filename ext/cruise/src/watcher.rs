@@ -17,11 +17,14 @@ use std::time::Duration;
 
 use globset::{Glob, GlobSet, GlobSetBuilder};
 use notify::event::{CreateKind, ModifyKind, RemoveKind};
-use notify::{EventKind, RecursiveMode};
+use notify::{ErrorKind, EventKind, RecursiveMode};
 use notify_debouncer_full::{new_debouncer, DebounceEventResult};
+
+const MAX_QUEUED_ERRORS: usize = 64;
 
 struct Shared {
   pending: Mutex<VecDeque<(String, String)>>,
+  errors: Mutex<VecDeque<String>>,
   glob_set: Option<GlobSet>,
   only_kinds: Vec<String>,
   write_fd: RawFd,
@@ -50,6 +53,16 @@ impl Shared {
     }
 
     added
+  }
+
+  fn enqueue_error(&self, message: String) {
+    let mut errors = self.errors.lock().unwrap();
+
+    while errors.len() >= MAX_QUEUED_ERRORS {
+      errors.pop_front();
+    }
+
+    errors.push_back(message);
   }
 
   fn wake(&self) {
@@ -81,6 +94,7 @@ impl Watcher {
 
     let shared = Arc::new(Shared {
       pending: Mutex::new(VecDeque::new()),
+      errors: Mutex::new(VecDeque::new()),
       glob_set,
       only_kinds,
       write_fd,
@@ -89,17 +103,29 @@ impl Watcher {
     let callback_shared = Arc::clone(&shared);
 
     let mut debouncer = match new_debouncer(Duration::from_secs_f64(debounce), None, move |result: DebounceEventResult| {
-      if let Ok(events) = result {
-        let mut added = false;
+      match result {
+        Ok(events) => {
+          let mut added = false;
 
-        for debounced_event in events {
-          if callback_shared.enqueue(debounced_event.event) {
-            added = true;
+          for debounced_event in events {
+            if callback_shared.enqueue(debounced_event.event) {
+              added = true;
+            }
+          }
+
+          if added {
+            callback_shared.wake();
           }
         }
 
-        if added {
-          callback_shared.wake();
+        Err(errors) => {
+          for error in &errors {
+            callback_shared.enqueue_error(describe_error(error));
+          }
+
+          if !errors.is_empty() {
+            callback_shared.wake();
+          }
         }
       }
     }) {
@@ -136,6 +162,21 @@ impl Watcher {
 
   pub fn poll(&self) -> Option<(String, String)> {
     self.shared.pending.lock().unwrap().pop_front()
+  }
+
+  pub fn poll_error(&self) -> Option<String> {
+    self.shared.errors.lock().unwrap().pop_front()
+  }
+}
+
+fn describe_error(error: &notify::Error) -> String {
+  match error.kind {
+    ErrorKind::MaxFilesWatch => format!(
+      "Reached the limit of watched files, so parts of the watched tree are no longer monitored. \
+       On Linux raise it with `sysctl fs.inotify.max_user_watches`. ({error})"
+    ),
+
+    _ => error.to_string(),
   }
 }
 

@@ -86,6 +86,36 @@ class WatcherTest < Minitest::Spec
     end
   end
 
+  it "exposes a non-blocking poll_error that is nil while healthy" do
+    directory = Dir.mktmpdir("cruise-watcher-errors")
+    watcher = Cruise::Watcher.new(directory, debounce: 0.02)
+
+    begin
+      assert_nil watcher.poll_error
+
+      File.write(File.join(directory, "fine.txt"), "hey")
+
+      event = wait_for_event(watcher) { |candidate| candidate.path.include?("fine.txt") }
+
+      refute_nil event
+      assert_nil watcher.poll_error, "a healthy watcher should not report errors"
+    ensure
+      watcher.close
+      FileUtils.rm_rf(directory)
+    end
+  end
+
+  it "poll_error returns nil after close" do
+    directory = Dir.mktmpdir("cruise-watcher-error-close")
+    watcher = Cruise::Watcher.new(directory, debounce: 0.02)
+
+    watcher.close
+
+    assert_nil watcher.poll_error
+  ensure
+    FileUtils.rm_rf(directory)
+  end
+
   it "poll returns nil after close" do
     directory = Dir.mktmpdir("cruise-watcher-close")
     watcher = Cruise::Watcher.new(directory, debounce: 0.02)

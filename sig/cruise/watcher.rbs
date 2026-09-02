@@ -11,6 +11,9 @@ module Cruise
     # : () -> Event?
     def poll: () -> Event?
 
+    # : () -> String?
+    def poll_error: () -> String?
+
     # : () -> void
     def close: () -> void
 

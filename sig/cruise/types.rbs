@@ -10,4 +10,6 @@ module Cruise
   type debounce = _ToF
 
   type callback = ^(Event) -> void
+
+  type error_callback = ^(String) -> void
 end

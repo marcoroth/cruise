@@ -51,6 +51,9 @@ Metrics/BlockLength:
 Metrics/ClassLength:
   Max: 200
 
+Metrics/ParameterLists:
+  CountKeywordArgs: false
+
 Metrics/PerceivedComplexity:
   Enabled: false
 

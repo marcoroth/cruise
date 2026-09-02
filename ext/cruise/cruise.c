@@ -126,6 +126,24 @@ static VALUE watcher_poll(VALUE self) {
   return rb_funcall(rb_cEvent, rb_intern("new"), 2, path, kind);
 }
 
+// watcher.poll_error
+static VALUE watcher_poll_error(VALUE self) {
+  struct Watcher *watcher = get_watcher(self);
+
+  if (!watcher) return Qnil;
+
+  char *message = NULL;
+
+  if (!cruise_watcher_poll_error(watcher, &message)) return Qnil;
+  if (!message) return Qnil;
+
+  VALUE string = make_utf8_string(message);
+
+  cruise_string_free(message);
+
+  return string;
+}
+
 // watcher.close
 static VALUE watcher_close(VALUE self) {
   struct Watcher *watcher = get_watcher(self);
@@ -154,5 +172,6 @@ void Init_cruise(void) {
   rb_define_private_method(rb_cWatcher, "initialize_native", watcher_initialize_native, 4);
   rb_define_method(rb_cWatcher, "io", watcher_io, 0);
   rb_define_method(rb_cWatcher, "poll", watcher_poll, 0);
+  rb_define_method(rb_cWatcher, "poll_error", watcher_poll_error, 0);
   rb_define_method(rb_cWatcher, "close", watcher_close, 0);
 }

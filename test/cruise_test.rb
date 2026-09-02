@@ -15,6 +15,37 @@ class CruiseTest < Minitest::Spec
     end
   end
 
+  it "warns on stderr by default when the watcher reports an error" do
+    _stdout, stderr = capture_io do
+      Cruise::DEFAULT_ERROR_HANDLER.call("watch limit reached")
+    end
+
+    assert_includes stderr, "Cruise: watch limit reached"
+  end
+
+  it "delivers events normally when an on_error handler is given" do
+    directory = Dir.mktmpdir("cruise-test")
+    detected_events = []
+    reported_errors = []
+
+    Thread.new do
+      sleep 0.5
+      File.write(File.join(directory, "with_handler.txt"), "hello")
+    end
+
+    catch(:stop) do
+      Cruise.watch(directory, on_error: ->(message) { reported_errors << message }) do |event|
+        detected_events << event
+        throw(:stop) if detected_events.any? { |detected| detected.path.include?("with_handler.txt") }
+      end
+    end
+
+    assert_operator detected_events.length, :>=, 1
+    assert_empty reported_errors
+  ensure
+    FileUtils.rm_rf(directory)
+  end
+
   it "raises when path does not exist" do
     assert_raises(ArgumentError) do
       Cruise.watch("/nonexistent/path/that/does/not/exist") { |event| event }
