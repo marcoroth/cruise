@@ -24,6 +24,11 @@ module Cruise
       raise NotImplementedError, "Cruise::Watcher#poll is provided by the native extension"
     end
 
+    #: () -> String?
+    def poll_error
+      raise NotImplementedError, "Cruise::Watcher#poll_error is provided by the native extension"
+    end
+
     #: () -> void
     def close
       raise NotImplementedError, "Cruise::Watcher#close is provided by the native extension"
